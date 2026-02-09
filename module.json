@@ -14,7 +14,6 @@
       "url": "https://codabool.com"
     }
   ],
-  "styles": ["main.css"],
   "esmodules": ["main.js"],
   "url": "https://github.com/CodaBool/custom-foundry",
   "bugs": "https://github.com/CodaBool/custom-foundry/issues",
