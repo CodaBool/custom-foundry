@@ -1,7 +1,7 @@
 {
   "id": "custom-foundry",
   "title": "Custom CodaBool FoundryVTT",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
@@ -18,7 +18,7 @@
   "url": "https://github.com/CodaBool/custom-foundry",
   "bugs": "https://github.com/CodaBool/custom-foundry/issues",
   "manifest": "https://raw.githubusercontent.com/CodaBool/custom-foundry/main/module.json",
-  "download": "https://github.com/CodaBool/custom-foundry/archive/v0.0.1.zip",
+  "download": "https://github.com/CodaBool/custom-foundry/archive/v0.0.2.zip",
   "packs": [
     {
       "name": "codabool-scene",
