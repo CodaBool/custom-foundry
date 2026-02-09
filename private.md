@@ -17,3 +17,10 @@ mv module.backup.json module.json
 rm terminal.zip
 ```
 2. install using manifest URL `GET_VALUE_FROM_TERMINAL_NOTES`
+
+
+# todo
+- add scripting journal with bootstrap pages
+- pixelate doesn't seem to work
+- where is theatre?
+- const tile4 = fromUuidSync(`Scene.${canvas.scene.id}.Tile.SCgLTPY1W6Mcwkxi`)
