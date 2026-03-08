@@ -1,7 +1,9 @@
 // Hooks.once('init', () => {
 // })
 
-Hooks.once("ready", () => {
+import { mothership } from "./mothership.js"
+
+Hooks.once("ready", async () => {
   if (!game.socket) return
   game.socket.on(`module.custom-foundry`, async payload => {
     if (payload.action === "executeMacroContentForPlayer" && payload.macroId && typeof payload.macroId === "string") {
@@ -22,4 +24,7 @@ Hooks.once("ready", () => {
       }
     }
   })
+
+
+  if (game.system.id === "mosh") await mothership()
 })

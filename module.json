@@ -1,7 +1,7 @@
 {
   "id": "custom-foundry",
   "title": "Custom CodaBool FoundryVTT",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
@@ -11,15 +11,19 @@
       "name": "CodaBool",
       "discord": "codabool",
       "email": "codabool@pm.me",
-      "url": "https://codabool.com"
+      "url": "https://codabool.com",
+      "flags": {}
     }
   ],
-  "esmodules": ["main.js"],
+  "esmodules": [
+    "main.js",
+    "mothership.js"
+  ],
   "socket": true,
   "url": "https://github.com/CodaBool/custom-foundry",
   "bugs": "https://github.com/CodaBool/custom-foundry/issues",
   "manifest": "https://raw.githubusercontent.com/CodaBool/custom-foundry/main/module.json",
-  "download": "https://github.com/CodaBool/custom-foundry/archive/v0.0.3.zip",
+  "download": "https://github.com/CodaBool/custom-foundry/archive/v0.0.4.zip",
   "packs": [
     {
       "name": "codabool-scene",
@@ -29,8 +33,27 @@
       "ownership": {
         "PLAYER": "NONE",
         "ASSISTANT": "OWNER"
-      },
-      "flags": {}
+      }
+    },
+    {
+      "name": "codabool-roll",
+      "label": "codabool-roll",
+      "path": "packs/roll",
+      "type": "RollTable",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "codabool-journal",
+      "label": "codabool-journal",
+      "path": "packs/journal",
+      "type": "JournalEntry",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
     },
     {
       "name": "codabool-macros",
@@ -38,10 +61,22 @@
       "path": "packs/macro",
       "type": "Macro",
       "ownership": {
-        "PLAYER": "NONE",
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "codabool-item",
+      "label": "codabool-item",
+      "path": "packs/item",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "flags": {}
+      "system": "mosh"
     }
-  ]
+  ],
+  "description": "",
+  "flags": {}
 }
