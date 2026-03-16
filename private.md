@@ -20,7 +20,6 @@ rm terminal.zip
 
 
 # todo
-- add scripting journal with bootstrap pages
 - pixelate doesn't seem to work
 - where is theatre?
 - const tile4 = fromUuidSync(`Scene.${canvas.scene.id}.Tile.SCgLTPY1W6Mcwkxi`)
