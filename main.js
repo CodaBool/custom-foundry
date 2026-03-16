@@ -25,6 +25,26 @@ Hooks.once("ready", async () => {
     }
   })
 
+  game.settings.register("custom-foundry", "ruler", {
+    scope: "world",
+    name: "turn off token ruler",
+    type: Boolean,
+    default: false,
+    config: true,
+    restricted: true,
+    onChange: value => {
+      if (value) {
+        CONFIG.Token.rulerClass = null
+      } else {
+        ui.notifications.info("reload to see token ruler again. May need to recreate tokens and combat")
+      }
+    }
+  })
+
+
+  if (game.settings.get("custom-foundry", "ruler")) {
+    CONFIG.Token.rulerClass = null
+  }
 
   if (game.system.id === "mosh") await mothership()
 })
