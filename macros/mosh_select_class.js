@@ -12,10 +12,10 @@ if (!me) {
 const classes = ["Analyst", "Enforcer", "Agent", "Subject"]
 // todo: update these when moving to compendium
 const classUuid = {
-  Subject: "Item.Mp9k44R7ZmZ7BRvE",
-  Analyst: "Item.6Af6W8ONgnnpw050",
-  Agent: "Item.WSNCI7gpdvj9TF1x",
-  Enforcer: "Item.eQMxTXShiCGl360a",
+  Subject: "Compendium.custom-foundry.codabool-item.Item.5dS86e8n8J1osxcj",
+  Analyst: "Compendium.custom-foundry.codabool-item.Item.3CNKJuuZRoUjNunc",
+  Agent: "Compendium.custom-foundry.codabool-item.Item.iXWknTjbB1BrSawY",
+  Enforcer: "Compendium.custom-foundry.codabool-item.Item.EX4s1o3OE0vTNh8r",
 };
 const existing = me.system.class?.value
 

@@ -41,7 +41,7 @@ export async function mothership() {
         pronounLabel.textContent = "Flaw"
       }
       pronoun.value = me.flags['custom-foundry']?.flaw || ""
-      pronoun.name = "unknown"
+      pronoun.readOnly = true
 
 
       // rank -> background
@@ -106,7 +106,7 @@ export async function mothership() {
         rightInput.style.borderRadius = "6px";
 
         // point the right input at the "max" field instead of "mod"
-        rightInput.name = "system.stats.combat.max";
+        rightInput.name = "system.stats.combat.max"
         rightInput.value = me?.system?.stats?.combat?.max ?? rightInput.value
 
         // wrapper for max input + label
@@ -133,9 +133,14 @@ export async function mothership() {
         slash.after(rightWrap)
 
         if (me?.system?.stats?.combat?.max === 99) {
+          // init
           me?.update({ "system.stats.combat.max": me?.system.stats.combat.value });
-        } else if (me?.system?.stats?.combat?.max < me?.system?.stats?.combat?.value) {
+        } else if (me?.system?.stats?.combat?.max < me?.system?.stats?.combat?.value && me?.system?.stats?.combat?.max !== 10) {
+          // value changed in the game naturally
           me?.update({ "system.stats.combat.value": me?.system.stats.combat.max });
+        } else if (me?.system?.stats?.combat?.max < me?.system?.stats?.combat?.value && me?.system?.stats?.combat?.max === 10) {
+          // character creation fix
+          me?.update({ "system.stats.combat.max": me?.system.stats.combat.value });
         }
       }
     }
