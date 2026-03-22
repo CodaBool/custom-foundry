@@ -59,6 +59,15 @@ export async function mothership() {
         creditsLabel.textContent = "Notes (Money)"
       }
 
+      // skill tree -> Abilities
+      const el = document.querySelector('.skill-tree-header-button')
+      if (el) {
+        const textNode = [...el.childNodes].find(
+          n => n.nodeType === Node.TEXT_NODE && n.textContent.trim()
+        );
+        if (textNode) textNode.textContent = 'Abilities';
+      }
+
 
       // combat
       const wrapper = document.querySelectorAll(".mainstatwrapper")[3]

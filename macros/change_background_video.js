@@ -18,11 +18,13 @@ if (!page) {
 }
 
 const backgrounds = [
-  ...page.text.content?.matchAll(/<video[^>]*src="([^"]+)"/g) ?? []
+  ...page.text.content?.matchAll(/src=['"]([^'"]+)['"]/g) ?? []
 ].map(match => match[1]);
 
+console.log(backgrounds, page.text.content)
+
 if (backgrounds.length === 0) {
-  ui.notifications.error("in 'background image' create content of images");
+  ui.notifications.error("in 'background video' create content of videos");
   return;
 }
 

@@ -7,10 +7,14 @@ Hooks.once("ready", async () => {
   if (!game.socket) return
   game.socket.on(`module.custom-foundry`, async payload => {
     if (payload.action === "executeMacroContentForPlayer" && payload.macroId && typeof payload.macroId === "string") {
-      const macro = game.macros.get(payload.macroId)
+      let macro = game.macros.get(payload.macroId)
       if (!macro) {
-        console.log("macro not found")
-        return
+        console.log("macro not found by id attempting uuid")
+        macro = fromUuidSync(payload.macroId)
+        if (!macro) {
+          console.log("macro not found by id or uuid")
+          return
+        }
       }
       const command = macro.command
       if (macro.type === "script") {
