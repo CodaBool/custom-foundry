@@ -58,6 +58,9 @@ Hooks.once("ready", async () => {
     }
   });
 
+
+
+
   game.settings.register("custom-foundry", "ruler", {
     scope: "world",
     name: "turn off token ruler",
@@ -80,4 +83,22 @@ Hooks.once("ready", async () => {
   }
 
   if (game.system.id === "mosh") await mothership()
+})
+
+
+Hooks.once("init", async () => {
+  // hide some journals
+  Hooks.on('renderJournalDirectory', (app, htmlRaw) => {
+    let html = htmlRaw
+    if (game.release.generation === 12 || html?.length === 1) {
+      html = html[0]
+    }
+    const j = game.journal._source.filter(f => f.flags?.["custom-foundry"]?.hidden)
+    if (j.length && !game.user.isGM) {
+      j.forEach(entry => {
+        const el = html.querySelector(`li[data-entry-id="${entry._id}"]`)
+        if (el) el.remove()
+      })
+    }
+  });
 })
