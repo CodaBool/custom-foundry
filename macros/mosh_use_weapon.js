@@ -96,7 +96,20 @@
     if (!result || result === "cancel") return;
 
     stat = result;
-    await item.setFlag(MODULE_ID, FLAG_KEY, stat);
+
+    if (game.user.isGM) {
+      await item.setFlag(MODULE_ID, FLAG_KEY, stat);
+    } else {
+      game.socket.emit("module.custom-foundry", {
+        action: "setDocumentFlags",
+        uuid: item.uuid,
+        flags: {
+          stat,
+        }
+      });
+    }
+    
+    
   }
 
   await me.rollCheck(null, "low", stat, null, null, item);

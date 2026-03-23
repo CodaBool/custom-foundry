@@ -65,25 +65,27 @@ Hooks.on("renderItemSheet", (app, htmlRaw) => {
   select.addEventListener("change", async (ev) => {
     const value = ev.currentTarget.value;
 
-    // verify currently viewed source item
-    // const item =
-    //   app.document?.id === sourceItem.id
-    //     ? sourceItem
-    //     : verifyItem;
-
-    // if (!item) {
-    //   ui.notifications.error("Could not find source item.");
-    //   return;
-    // }
 
     try {
-      if (!value) {
-        await item.unsetFlag(MODULE_ID, "stat");
-        ui.notifications.info(`Cleared stat on '${item.name}'`);
-        return;
-      }
 
-      await item.setFlag(MODULE_ID, "stat", value);
+
+      if (game.user.isGM) {
+        if (!value) {
+          await item.unsetFlag(MODULE_ID, "stat");
+          ui.notifications.info(`Cleared stat on '${item.name}'`);
+          return;
+        }
+
+        await item.setFlag(MODULE_ID, "stat", value);
+      } else {
+        game.socket.emit("module.custom-foundry", {
+          action: "setDocumentFlags",
+          uuid: item.uuid,
+          flags: {
+            stat: value,
+          }
+        });
+      }
       ui.notifications.info(`Set '${item.name}' stat to '${value}'`);
     } catch (err) {
       console.error("custom-foundry stat flag update failed", err);

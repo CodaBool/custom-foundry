@@ -6,28 +6,57 @@ import { mothership } from "./mothership.js"
 Hooks.once("ready", async () => {
   if (!game.socket) return
   game.socket.on(`module.custom-foundry`, async payload => {
-    if (payload.action === "executeMacroContentForPlayer" && payload.macroId && typeof payload.macroId === "string") {
-      let macro = game.macros.get(payload.macroId)
+    // macro proxy
+    if (
+      payload.action === "executeMacroContentForPlayer" &&
+      payload.macroId &&
+      typeof payload.macroId === "string"
+    ) {
+      let macro = game.macros.get(payload.macroId);
       if (!macro) {
-        console.log("macro not found by id attempting uuid")
-        macro = fromUuidSync(payload.macroId)
+        console.log("macro not found by id attempting uuid");
+        macro = fromUuidSync(payload.macroId);
         if (!macro) {
-          console.log("macro not found by id or uuid")
-          return
+          console.log("macro not found by id or uuid");
+          return;
         }
       }
-      const command = macro.command
+
+      const command = macro.command;
       if (macro.type === "script") {
-        const AsyncFunction = Object.getPrototypeOf(
-          async function () {},
-        ).constructor
+        const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
         const func = command.includes("await")
           ? new AsyncFunction("gmContext", command)
-          : new Function("gmContext", command)
-        await func.call(globalThis, payload.gmContext || {})
+          : new Function("gmContext", command);
+
+        await func.call(globalThis, payload.gmContext || {});
       }
     }
-  })
+
+    // document proxy
+    else if (
+      payload.action === "setDocumentFlags" &&
+      payload.uuid &&
+      typeof payload.uuid === "string" &&
+      payload.flags &&
+      typeof payload.flags === "object"
+    ) {
+      if (!game.user.isGM) return;
+
+      
+      const doc = fromUuidSync(payload.uuid);
+      console.log("set flag", doc, "flags", payload.flags)
+      if (!doc) {
+        console.error("custom-foundry | document not found for uuid", payload.uuid);
+        return;
+      }
+
+      const entries = Object.entries(payload.flags);
+      for (const [key, value] of entries) {
+        await doc.setFlag("custom-foundry", key, value);
+      }
+    }
+  });
 
   game.settings.register("custom-foundry", "ruler", {
     scope: "world",
