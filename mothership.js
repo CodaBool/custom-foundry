@@ -12,161 +12,333 @@ export async function mothership() {
   // })
 
 
-  Hooks.on("renderActorSheet", async (app, htmlRaw) => {
-    if (!htmlRaw[0].id.includes("Mothership")) return
+const MODULE_ID = "custom-foundry";
+const STAT_OPTIONS = ["speed", "strength", "will"];
 
-    const content = htmlRaw[0].querySelector(".window-content")
-    let me = game.user.character
+Hooks.on("renderItemSheet", (app, htmlRaw) => {
+  const root = htmlRaw?.[0];
+  if (!root) return;
+
+  // prevent duplicate injection on re-renders
+  if (root.querySelector("#custom-foundry-stat-config")) return;
+
+  // safer than name lookup, but we'll also verify below
+  // const sourceItem = app.document;
+  // if (!sourceItem) return;
+
+  // fallback / verification lookup like you mentioned
+  const item = game.items.getName(app.document.name);
+
+  const currentStat = item.getFlag(MODULE_ID, "stat") || "";
+
+  const block = document.createElement("div");
+  block.id = "custom-foundry-stat-config";
+  block.style.margin = "8px 0";
+  block.style.padding = "8px";
+  block.style.border = "1px solid rgba(255,255,255,0.15)";
+  block.style.borderRadius = "6px";
+
+  block.innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      <label for="custom-foundry-stat-select" style="font-weight:700;">
+        Custom Foundry Stat
+      </label>
+
+      <p class="hint" style="margin:0;">
+        Choose which stat this item rolls with. Valid options are:
+        <strong>speed</strong>, <strong>strength</strong>, or <strong>will</strong>.
+      </p>
+
+      <select id="custom-foundry-stat-select" style="width:100%;">
+        <option value="" ${!currentStat ? "selected" : ""}>-- none --</option>
+        ${STAT_OPTIONS.map(stat => `
+          <option value="${stat}" ${currentStat === stat ? "selected" : ""}>
+            ${stat.toUpperCase()}
+          </option>
+        `).join("")}
+      </select>
+    </div>
+  `;
+
+  const select = block.querySelector("#custom-foundry-stat-select");
+
+  select.addEventListener("change", async (ev) => {
+    const value = ev.currentTarget.value;
+
+    // verify currently viewed source item
+    // const item =
+    //   app.document?.id === sourceItem.id
+    //     ? sourceItem
+    //     : verifyItem;
+
+    // if (!item) {
+    //   ui.notifications.error("Could not find source item.");
+    //   return;
+    // }
+
+    try {
+      if (!value) {
+        await item.unsetFlag(MODULE_ID, "stat");
+        ui.notifications.info(`Cleared stat on '${item.name}'`);
+        return;
+      }
+
+      await item.setFlag(MODULE_ID, "stat", value);
+      ui.notifications.info(`Set '${item.name}' stat to '${value}'`);
+    } catch (err) {
+      console.error("custom-foundry stat flag update failed", err);
+      ui.notifications.error("Failed to update item stat.");
+    }
+  });
+
+  // pick a place to inject it
+  const form =
+    root.querySelector("form") ||
+    root.querySelector(".window-content") ||
+    root;
+
+  form.appendChild(block);
+});
+
+Hooks.on("renderActorSheet", (app, htmlRaw) => {
+  const root = htmlRaw?.[0];
+  if (!root?.id?.includes("Mothership")) return;
+
+  const content = root.querySelector(".window-content");
+  if (!content) return;
+
+  const actor = getSheetActor(app);
+  if (!actor) return;
+
+  // Clean up old observer if this sheet re-rendered
+  if (app._customFoundryObserver) {
+    app._customFoundryObserver.disconnect();
+    app._customFoundryObserver = null;
+  }
+
+  if (app._customFoundryFrame) {
+    cancelAnimationFrame(app._customFoundryFrame);
+    app._customFoundryFrame = null;
+  }
+
+  function getSheetActor(app) {
+    let me = game.user.character;
 
     if (!me && game.user.isGM) {
-      me = canvas.tokens.controlled[0]?.actor
+      me = canvas.tokens.controlled[0]?.actor;
       if (!me) {
-        ui.notifications.error("no character")
-        return
+        ui.notifications.error("no character");
+        return null;
       }
-      if (app.actor.uuid !== me.uuid) {
-        ui.notifications.error("selected wrong character")
-        return
-      }
-    }
-    if (!me) return
-
-    function inject() {
-      if (htmlRaw[0].querySelector("#injected-max")) return
-
-      // flaw
-      const pronoun = htmlRaw[0].querySelector('input[name="system.pronouns.value"]')
-      const pronounLabel = pronoun?.closest("div")?.previousElementSibling
-      if (pronounLabel && pronounLabel.classList.contains("headerinputtext")) {
-        pronounLabel.textContent = "Flaw"
-      }
-      pronoun.value = me.flags['custom-foundry']?.flaw || ""
-      pronoun.readOnly = true
-
-
-      // rank -> background
-      const rankInput = htmlRaw[0].querySelector('input[name="system.rank.value"]')
-      const rankLabel = rankInput?.closest("div")?.previousElementSibling
-      if (rankLabel && rankLabel.classList.contains("headerinputtext")) {
-        rankLabel.textContent = "Background"
-      }
-
-
-      // credits -> notes
-      const creditsInput = htmlRaw[0].querySelector('input[name="system.credits.value"]')
-      const creditsLabel = creditsInput?.closest("div")?.previousElementSibling
-      if (creditsLabel && creditsLabel.classList.contains("headerinputtext")) {
-        creditsLabel.textContent = "Notes (Money)"
-      }
-
-      // skill tree -> Abilities
-      const el = document.querySelector('.skill-tree-header-button')
-      if (el) {
-        const textNode = [...el.childNodes].find(
-          n => n.nodeType === Node.TEXT_NODE && n.textContent.trim()
-        );
-        if (textNode) textNode.textContent = 'Abilities';
-      }
-
-
-      // combat
-      const wrapper = document.querySelectorAll(".mainstatwrapper")[3]
-      if (!wrapper) return
-      const leftBlock = wrapper.querySelector(".resource.mainstat");
-      const leftInput = wrapper.querySelector(".circle-input");
-      const rightInput = wrapper.querySelector(".mainstatmod-input");
-      const oldSeparator = wrapper.querySelector(".mainstatmod-title");
-      const label = wrapper.querySelector(".mainstattext");
-
-      if (leftBlock && leftInput && rightInput) {
-
-        // change Combat → WILL
-        if (label) label.textContent = "WILL";
-
-        // remove original "+"
-        if (oldSeparator) oldSeparator.remove();
-
-        // make stat container flex
-        leftBlock.style.display = "flex";
-        leftBlock.style.alignItems = "center";
-        leftBlock.style.gap = "6px";
-        leftBlock.childNodes[1].style.width = "50%"
-
-        // remove circular styling
-        leftInput.style.borderRadius = "6px";
-
-
-        // create slash divider
-        const slash = document.createElement("div");
-        slash.textContent = "/";
-        slash.style.fontSize = "24px";
-        slash.style.margin = "0";
-        slash.style.display = "flex";
-        slash.style.alignItems = "center";
-        slash.style.alignSelf = "center";
-
-        // insert slash
-        leftInput.after(slash);
-
-        // make right input match left
-        rightInput.className = leftInput.className;
-        rightInput.style.cssText = leftInput.style.cssText;
-        rightInput.style.textAlign = "center";
-        rightInput.style.borderRadius = "6px";
-
-        // point the right input at the "max" field instead of "mod"
-        rightInput.name = "system.stats.combat.max"
-        rightInput.value = me?.system?.stats?.combat?.max ?? rightInput.value
-
-        // wrapper for max input + label
-        const rightWrap = document.createElement("div");
-        rightWrap.style.display = "inline-flex";
-        rightWrap.style.flexDirection = "column";
-        rightWrap.style.alignItems = "center";
-        rightWrap.style.marginTop = "18px";
-
-        rightInput.parentNode.insertBefore(rightWrap, rightInput);
-        rightWrap.appendChild(rightInput);
-
-        const maxLabel = document.createElement("div");
-        maxLabel.textContent = "max";
-        maxLabel.id = "injected-max";
-        maxLabel.style.fontSize = "18px";
-        maxLabel.style.lineHeight = "1";
-        maxLabel.style.marginTop = "2px";
-        maxLabel.style.textAlign = "center";
-
-        rightWrap.appendChild(maxLabel);
-
-        // place max block after slash
-        slash.after(rightWrap)
-
-        if (me?.system?.stats?.combat?.max === 99) {
-          // init
-          me?.update({ "system.stats.combat.max": me?.system.stats.combat.value });
-        } else if (me?.system?.stats?.combat?.max < me?.system?.stats?.combat?.value && me?.system?.stats?.combat?.max !== 10) {
-          // value changed in the game naturally
-          me?.update({ "system.stats.combat.value": me?.system.stats.combat.max });
-        } else if (me?.system?.stats?.combat?.max < me?.system?.stats?.combat?.value && me?.system?.stats?.combat?.max === 10) {
-          // character creation fix
-          me?.update({ "system.stats.combat.max": me?.system.stats.combat.value });
-        }
+      if (app.actor?.uuid !== me.uuid) {
+        ui.notifications.error("selected wrong character");
+        return null;
       }
     }
-    // watch for changes
-    let debounceTimeout
-    const debouncedInject = () => {
-      clearTimeout(debounceTimeout)
-      debounceTimeout = setTimeout(() => requestAnimationFrame(inject), 1)
+
+    return me ?? null;
+  }
+
+  function getFlagNumber(actor, key, fallback = 0) {
+    const raw = actor.getFlag(MODULE_ID, key);
+    const num = Number(raw);
+    return Number.isFinite(num) ? num : fallback;
+  }
+
+  async function saveFlagNumber(actor, key, value) {
+    const num = Number(value);
+    await actor.setFlag(MODULE_ID, key, Number.isFinite(num) ? num : 0);
+  }
+
+  function relabelHeaderField(inputSelector, newLabel) {
+    const input = root.querySelector(inputSelector);
+    const label = input?.closest("div")?.previousElementSibling;
+
+    if (label?.classList.contains("headerinputtext") && label.textContent !== newLabel) {
+      label.textContent = newLabel;
     }
-    const observer = new MutationObserver(debouncedInject)
-    observer.observe(content, { childList: true, subtree: true })
-    inject()
+
+    return input;
+  }
+
+  function applyStaticSheetChanges() {
+    // pronouns -> flaw
+    const pronounInput = relabelHeaderField('input[name="system.pronouns.value"]', "Flaw");
+    if (pronounInput) {
+      const flaw = actor.getFlag(MODULE_ID, "flaw") || "";
+      if (pronounInput.value !== flaw) pronounInput.value = flaw;
+      if (!pronounInput.readOnly) pronounInput.readOnly = true;
+    }
+
+    // rank -> background
+    relabelHeaderField('input[name="system.rank.value"]', "Background");
+
+    // credits -> notes
+    relabelHeaderField('input[name="system.credits.value"]', "Notes (Money)");
+
+    // skill tree -> abilities
+    const btn = root.querySelector(".skill-tree-header-button");
+    if (btn) {
+      const textNode = [...btn.childNodes].find(
+        (n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim()
+      );
+
+      if (textNode && textNode.textContent.trim() !== "Abilities") {
+        textNode.textContent = "Abilities";
+      }
+    }
+  }
+
+  function buildWillBlock() {
+    const will = getFlagNumber(actor, "will", 0);
+    const willMax = getFlagNumber(actor, "willMax", 0);
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "mainstatwrapper";
+    wrapper.dataset.injectedWill = "true";
+
+    wrapper.innerHTML = `
+      <div class="resource mainstat" style="display:flex;align-items:center;gap:6px;">
+        <div class="mainstatlabel" style="width:50%;">
+          <span
+            class="ability-mod stat-roll rollable mainstattext"
+            data-key="will"
+            data-roll="d100"
+            data-label="Will"
+          >WILL</span>
+        </div>
+
+        <input
+          class="circle-input injected-will"
+          type="text"
+          value="${will}"
+          data-dtype="Number"
+          style="border-radius:6px;"
+        />
+
+        <div style="font-size:24px;margin:0;display:flex;align-items:center;align-self:center;">/</div>
+
+        <div style="display:inline-flex;flex-direction:column;align-items:center;margin-top:18px;">
+          <input
+            class="circle-input injected-will-max"
+            type="text"
+            value="${willMax}"
+            data-dtype="Number"
+            style="border-radius:6px;text-align:center;"
+          />
+          <div style="font-size:18px;line-height:1;margin-top:2px;text-align:center;">max</div>
+        </div>
+      </div>
+    `;
+
+    const willInput = wrapper.querySelector(".injected-will");
+    const willMaxInput = wrapper.querySelector(".injected-will-max");
+
+    willInput?.addEventListener("change", async (ev) => {
+      await saveFlagNumber(actor, "will", ev.currentTarget.value);
+    });
+
+    willMaxInput?.addEventListener("change", async (ev) => {
+      await saveFlagNumber(actor, "willMax", ev.currentTarget.value);
+    });
+
+    return wrapper;
+  }
+
+  function syncWillBlock() {
+    const statWrappers = root.querySelectorAll(".mainstatwrapper");
+    if (!statWrappers.length) return;
+
+    let willWrapper = root.querySelector('.mainstatwrapper[data-injected-will="true"]');
+    const anchor = statWrappers[3] ?? statWrappers[statWrappers.length - 1];
+    if (!anchor) return;
+
+    if (!willWrapper) {
+      willWrapper = buildWillBlock();
+      anchor.after(willWrapper);
+      return;
+    }
+
+    const will = String(getFlagNumber(actor, "will", 0));
+    const willMax = String(getFlagNumber(actor, "willMax", 0));
+
+    const willInput = willWrapper.querySelector(".injected-will");
+    const willMaxInput = willWrapper.querySelector(".injected-will-max");
+
+    if (willInput && document.activeElement !== willInput && willInput.value !== will) {
+      willInput.value = will;
+    }
+
+    if (willMaxInput && document.activeElement !== willMaxInput && willMaxInput.value !== willMax) {
+      willMaxInput.value = willMax;
+    }
+  }
 
 
 
+  function bindWeaponRolls() {
+    const buttons = root.querySelectorAll(".weapon-roll");
 
-    // const sheet = Object.values(ui.windows).find(win => win.id.includes("MothershipActor"))
+    buttons.forEach((btn) => {
+      if (btn.dataset.boundWeaponRoll === "true") return;
+      btn.dataset.boundWeaponRoll = "true";
 
-  })
+
+      //btn.addEventListener("click", killEvent, true);
+
+      btn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        ev.stopImmediatePropagation();
+        const li = ev.currentTarget.closest(".item");
+        const macro = game.macros.getName("mosh use weapon")
+        if (!macro) ui.notifications.error("the use weapon macro must be imported")
+        macro.execute({ args: [li.dataset.itemId] });
+      }, true);
+    });
+  }
+
+  function runPass() {
+    if (!root.isConnected) return;
+
+    applyStaticSheetChanges();
+    syncWillBlock();
+    bindWeaponRolls();
+  }
+
+  let scheduled = false;
+
+  // runs on every change
+  function scheduleRun() {
+    if (scheduled) return;
+    scheduled = true;
+
+    app._customFoundryFrame = requestAnimationFrame(() => {
+      scheduled = false;
+      app._customFoundryFrame = null;
+
+      if (!root.isConnected) {
+        app._customFoundryObserver?.disconnect();
+        app._customFoundryObserver = null;
+        return;
+      }
+
+      runPass();
+    });
+  }
+
+  const observer = new MutationObserver(() => {
+    scheduleRun();
+  });
+
+  observer.observe(content, {
+    childList: true,
+    subtree: true,
+  });
+
+  app._customFoundryObserver = observer;
+
+  // initial pass only once on render
+  runPass();
+});
 }
