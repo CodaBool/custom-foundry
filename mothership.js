@@ -139,17 +139,6 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
     return me ?? null;
   }
 
-  function getFlagNumber(actor, key, fallback = 0) {
-    const raw = actor.getFlag(MODULE_ID, key);
-    const num = Number(raw);
-    return Number.isFinite(num) ? num : fallback;
-  }
-
-  async function saveFlagNumber(actor, key, value) {
-    const num = Number(value);
-    await actor.setFlag(MODULE_ID, key, Number.isFinite(num) ? num : 0);
-  }
-
   function relabelHeaderField(inputSelector, newLabel) {
     const input = root.querySelector(inputSelector);
     const label = input?.closest("div")?.previousElementSibling;
@@ -165,7 +154,7 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
     // pronouns -> flaw
     const pronounInput = relabelHeaderField('input[name="system.pronouns.value"]', "Flaw");
     if (pronounInput) {
-      const flaw = actor.getFlag(MODULE_ID, "flaw") || "";
+      const flaw = actor.getFlag("custom-foundry", "flaw") || "";
       if (pronounInput.value !== flaw) pronounInput.value = flaw;
       if (!pronounInput.readOnly) pronounInput.readOnly = true;
     }
@@ -176,7 +165,7 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
     // credits -> notes
     relabelHeaderField('input[name="system.credits.value"]', "Notes (Money)");
 
-    // skill tree -> abilities
+    // skill tree -> Abilities
     const btn = root.querySelector(".skill-tree-header-button");
     if (btn) {
       const textNode = [...btn.childNodes].find(
@@ -189,92 +178,124 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
     }
   }
 
-  function buildWillBlock() {
-    const will = getFlagNumber(actor, "will", 0);
-    const willMax = getFlagNumber(actor, "willMax", 0);
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "mainstatwrapper";
-    wrapper.dataset.injectedWill = "true";
-
-    wrapper.innerHTML = `
-      <div class="resource mainstat" style="display:flex;align-items:center;gap:6px;">
-        <div class="mainstatlabel" style="width:50%;">
-          <span
-            class="ability-mod stat-roll rollable mainstattext"
-            data-key="will"
-            data-roll="d100"
-            data-label="Will"
-          >WILL</span>
-        </div>
-
-        <input
-          class="circle-input injected-will"
-          type="text"
-          value="${will}"
-          data-dtype="Number"
-          style="border-radius:6px;"
-        />
-
-        <div style="font-size:24px;margin:0;display:flex;align-items:center;align-self:center;">/</div>
-
-        <div style="display:inline-flex;flex-direction:column;align-items:center;margin-top:18px;">
-          <input
-            class="circle-input injected-will-max"
-            type="text"
-            value="${willMax}"
-            data-dtype="Number"
-            style="border-radius:6px;text-align:center;"
-          />
-          <div style="font-size:18px;line-height:1;margin-top:2px;text-align:center;">max</div>
-        </div>
-      </div>
-    `;
-
-    const willInput = wrapper.querySelector(".injected-will");
-    const willMaxInput = wrapper.querySelector(".injected-will-max");
-
-    willInput?.addEventListener("change", async (ev) => {
-      await saveFlagNumber(actor, "will", ev.currentTarget.value);
-    });
-
-    willMaxInput?.addEventListener("change", async (ev) => {
-      await saveFlagNumber(actor, "willMax", ev.currentTarget.value);
-    });
-
-    return wrapper;
-  }
-
-  function syncWillBlock() {
+  function rewriteCombatAsWill() {
     const statWrappers = root.querySelectorAll(".mainstatwrapper");
-    if (!statWrappers.length) return;
+    const wrapper = statWrappers[3];
+    if (!wrapper) return;
 
-    let willWrapper = root.querySelector('.mainstatwrapper[data-injected-will="true"]');
-    const anchor = statWrappers[3] ?? statWrappers[statWrappers.length - 1];
-    if (!anchor) return;
+    const leftBlock = wrapper.querySelector(".resource.mainstat");
+    const label = wrapper.querySelector(".mainstattext");
 
-    if (!willWrapper) {
-      willWrapper = buildWillBlock();
-      anchor.after(willWrapper);
-      return;
+    // original combat value input
+    const leftInput =
+      wrapper.querySelector('input[name="system.stats.combat.value"]') ||
+      wrapper.querySelector(".circle-input");
+
+    // original combat mod / right-side input, which we are repurposing as max
+    const rightInput =
+      wrapper.querySelector('input[name="system.stats.combat.max"]') ||
+      wrapper.querySelector(".mainstatmod-input");
+
+    const oldSeparator = wrapper.querySelector(".mainstatmod-title");
+
+    if (!leftBlock || !leftInput || !rightInput) return;
+
+    // relabel Combat -> WILL
+    if (label) {
+      if (label.textContent.trim() !== "WILL") label.textContent = "WILL";
+      label.dataset.key = "will";
+      label.dataset.label = "Will";
     }
 
-    const will = String(getFlagNumber(actor, "will", 0));
-    const willMax = String(getFlagNumber(actor, "willMax", 0));
+    // layout styling
+    leftBlock.style.display = "flex";
+    leftBlock.style.alignItems = "center";
+    leftBlock.style.gap = "6px";
 
-    const willInput = willWrapper.querySelector(".injected-will");
-    const willMaxInput = willWrapper.querySelector(".injected-will-max");
+    const mainLabel = wrapper.querySelector(".mainstatlabel");
+    if (mainLabel) mainLabel.style.width = "50%";
 
-    if (willInput && document.activeElement !== willInput && willInput.value !== will) {
-      willInput.value = will;
+    leftInput.style.borderRadius = "6px";
+
+    // remove old "+" title if present
+    if (oldSeparator) oldSeparator.remove();
+
+    // create slash once
+    let slash = wrapper.querySelector('[data-custom-foundry="combat-slash"]');
+    if (!slash) {
+      slash = document.createElement("div");
+      slash.setAttribute("data-custom-foundry", "combat-slash");
+      slash.textContent = "/";
+      slash.style.fontSize = "24px";
+      slash.style.margin = "0";
+      slash.style.display = "flex";
+      slash.style.alignItems = "center";
+      slash.style.alignSelf = "center";
+      leftInput.after(slash);
     }
 
-    if (willMaxInput && document.activeElement !== willMaxInput && willMaxInput.value !== willMax) {
-      willMaxInput.value = willMax;
+    // make right input look like the left input
+    rightInput.className = leftInput.className;
+    rightInput.style.cssText = leftInput.style.cssText;
+    rightInput.style.textAlign = "center";
+    rightInput.style.borderRadius = "6px";
+    rightInput.name = "system.stats.combat.max";
+
+    // create wrapper for max input once
+    let rightWrap = wrapper.querySelector('[data-custom-foundry="combat-max-wrap"]');
+    if (!rightWrap) {
+      rightWrap = document.createElement("div");
+      rightWrap.setAttribute("data-custom-foundry", "combat-max-wrap");
+      rightWrap.style.display = "inline-flex";
+      rightWrap.style.flexDirection = "column";
+      rightWrap.style.alignItems = "center";
+      rightWrap.style.marginTop = "18px";
+    }
+
+    if (rightInput.parentNode !== rightWrap) {
+      rightInput.parentNode?.insertBefore(rightWrap, rightInput);
+      rightWrap.appendChild(rightInput);
+    }
+
+    // create max label once
+    let maxLabel = rightWrap.querySelector('[data-custom-foundry="combat-max-label"]');
+    if (!maxLabel) {
+      maxLabel = document.createElement("div");
+      maxLabel.setAttribute("data-custom-foundry", "combat-max-label");
+      maxLabel.textContent = "max";
+      maxLabel.style.fontSize = "18px";
+      maxLabel.style.lineHeight = "1";
+      maxLabel.style.marginTop = "2px";
+      maxLabel.style.textAlign = "center";
+      rightWrap.appendChild(maxLabel);
+    }
+
+    // ensure max block sits after slash
+    if (slash.nextElementSibling !== rightWrap) {
+      slash.after(rightWrap);
+    }
+
+    // sync values from combat
+    const combatValue = actor.system?.stats?.combat?.value ?? 0;
+    const combatMax = actor.system?.stats?.combat?.max ?? 0;
+
+    if (document.activeElement !== leftInput && String(leftInput.value) !== String(combatValue)) {
+      leftInput.value = combatValue;
+    }
+
+    if (document.activeElement !== rightInput && String(rightInput.value) !== String(combatMax)) {
+      rightInput.value = combatMax;
+    }
+
+    // keep your earlier combat/max correction logic
+    if (combatMax === 99) {
+      actor.update({ "system.stats.combat.max": combatValue });
+    } else if (combatMax < combatValue && combatMax !== 10) {
+      actor.update({ "system.stats.combat.value": combatMax });
+    } else if (combatMax < combatValue && combatMax === 10) {
+      actor.update({ "system.stats.combat.max": combatValue });
     }
   }
-
-
 
   function bindWeaponRolls() {
     const buttons = root.querySelectorAll(".weapon-roll");
@@ -283,32 +304,72 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
       if (btn.dataset.boundWeaponRoll === "true") return;
       btn.dataset.boundWeaponRoll = "true";
 
+      btn.addEventListener(
+        "click",
+        (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          ev.stopImmediatePropagation();
 
-      //btn.addEventListener("click", killEvent, true);
+          const li = ev.currentTarget.closest(".item");
+          if (!li?.dataset?.itemId) {
+            ui.notifications.error("no item id found");
+            return;
+          }
 
-      btn.addEventListener("click", (ev) => {
+          const macro = game.macros.getName("mosh use weapon");
+          if (!macro) {
+            ui.notifications.error("the use weapon macro must be imported");
+            return;
+          }
+
+          macro.execute({ args: [li.dataset.itemId] });
+        },
+        true
+      );
+    });
+  }
+
+  function bindWillRoll() {
+    const statWrappers = root.querySelectorAll(".mainstatwrapper");
+    const wrapper = statWrappers[3];
+    if (!wrapper) return;
+
+    const willBtn = wrapper.querySelector(".mainstattext");
+    if (!willBtn) return;
+
+    if (willBtn.dataset.boundWillRoll === "true") return;
+    willBtn.dataset.boundWillRoll = "true";
+
+    willBtn.addEventListener(
+      "click",
+      (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
         ev.stopImmediatePropagation();
-        const li = ev.currentTarget.closest(".item");
-        const macro = game.macros.getName("mosh use weapon")
-        if (!macro) ui.notifications.error("the use weapon macro must be imported")
-        macro.execute({ args: [li.dataset.itemId] });
-      }, true);
-    });
+        const macro = game.macros.getName("mosh roll will");
+        if (!macro) return ui.notifications.error("import 'mosh roll will' macro");
+        macro.execute({ args:[{
+          actor: actor.name,
+          combatValue: actor.system?.stats?.combat?.value,
+          combatMax: actor.system?.stats?.combat?.max,
+        }] });
+      },
+      true
+    );
   }
 
   function runPass() {
     if (!root.isConnected) return;
 
     applyStaticSheetChanges();
-    syncWillBlock();
+    rewriteCombatAsWill();
+    bindWillRoll();
     bindWeaponRolls();
   }
 
   let scheduled = false;
 
-  // runs on every change
   function scheduleRun() {
     if (scheduled) return;
     scheduled = true;
