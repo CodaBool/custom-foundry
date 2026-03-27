@@ -43,7 +43,7 @@ foundry.applications.api.DialogV2.wait({
   buttons: [
     {
       action: "modify",
-      label: "Modify",
+      label: "Confirm",
       icon: "fas fa-sliders-h",
       default: true,
       callback: async (event, button, dialog) => {
