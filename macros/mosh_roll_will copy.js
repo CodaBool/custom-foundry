@@ -24,11 +24,6 @@ if (!actor) {
   return;
 }
 
-if (actor.system?.stats?.combat?.value === 0) {
-  ui.notifications.error("you lack the will for this")
-  return;
-}
-
 const ROMAN_TO_INT = {
   I: 1,
   II: 2,
@@ -255,26 +250,17 @@ function buildExtraHtml(lines = []) {
   return filtered.join("<br>");
 }
 
-async function createCombinedPowerMessage({
+async function createPowerCardMessage({
   actor,
   title,
   image,
   outcomeLabel = "",
-  resultBody = "",
-  roll,
   bodyHtml = "",
-  extraHtml = ""
+  extraHtml = "",
+  rollHtml = "",
+  whisper = false
 }) {
-  let rollHtml = roll ? await roll.render() : "";
-
-  if (rollHtml) {
-    rollHtml = rollHtml.replace(
-      /\b1d100\b/g,
-      `1d100 <i class="fas fa-less-than"></i> ${target}`
-    );
-  }
-
-  const content = await TextEditor.enrichHTML(`
+  const content = `
     <div class="mosh" data-actor-id="${actor.id}">
       <div class="rollcontainer">
         <div class="flexrow" style="margin-bottom:5px">
@@ -290,21 +276,15 @@ async function createCombinedPowerMessage({
           </div>
         ` : ""}
 
-        ${resultBody ? `
+        ${bodyHtml ? `
           <div class="description" style="margin-bottom:10px">
-            <div class="body">${resultBody}</div>
+            <div class="body">${bodyHtml}</div>
           </div>
         ` : ""}
 
         ${rollHtml ? `
           <div style="margin-bottom:10px">
             ${rollHtml}
-          </div>
-        ` : ""}
-
-        ${bodyHtml ? `
-          <div class="description" style="margin-bottom:10px">
-            <div class="body">${bodyHtml}</div>
           </div>
         ` : ""}
 
@@ -315,14 +295,14 @@ async function createCombinedPowerMessage({
         ` : ""}
       </div>
     </div>
-  `, { async: true });
+  `;
 
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content
+    content,
+    whisper: whisper ? [game.user.id] : []
   });
 }
-
 
 /* -------------------------------------------- */
 /* Pull available powers                        */
@@ -398,10 +378,10 @@ if (richResult.success && richResult.critical) {
   }
 
   outcomeLabel = "CRITICAL MISCAST!";
-  resultBody = 'You rolled a <strong>critical failure</strong>.';
+  resultBody = 'You rolled a <strong>critical failure</strong> and did not roll at or under your <strong>Will</strong>.';
   extraOutcomeBody = `
-      <div class="body">Your power catastrophically misfires, roll a @UUID[${curse.uuid}]{curse}</div><br><br>
-      <div class="body">Additionally roll a @UUID[${panicCheck.uuid}]{panic check}</div>
+      <div class="body">Your power catastrophically misfires roll a @UUID[${curse.uuid}]{curse}</div><br><br>
+      <div class="body">Roll a @UUID[${panicCheck.uuid}]{panic check}</div>
     `
 
 } else {
@@ -410,21 +390,52 @@ if (richResult.success && richResult.critical) {
   extraOutcomeBody = `<div class="body">Roll a @UUID[${miscast.uuid}]{miscast}</div><br><br>`
 }
 
+// Keep this as toMessage so DSN and Foundry's normal roll message work cleanly.
+let rollHtml = await roll.render();
 
-const rollResultHtml = `
-  <div class="body">${resultBody}</div>
-  ${extraOutcomeBody ? `<div class="body" style="margin-top:8px">${extraOutcomeBody}</div>` : ""}
-`;
+// Replace the displayed roll formula in the rendered HTML
+rollHtml = rollHtml.replace(/\b1d100\b/g, `1d100 <i class="fas fa-less-than"></i> ${target}`);
+const messageContent = await TextEditor.enrichHTML(`
+  <div class="mosh" data-actor-id="${actor.id}">
+    <div class="rollcontainer">
+      <div class="flexrow" style="margin-bottom:5px">
+        <div class="rollweaponh1">${powerName}</div>
+        <div style="text-align:right">
+          <img class="roll-image" src="systems/mosh/images/icons/ui/attributes/intellect.png">
+        </div>
+      </div>
+
+      <div style="font-size:1.1rem;margin-top:-10px;margin-bottom:5px">
+        <strong>${outcomeLabel}</strong>
+      </div>
+
+      <div class="description" style="margin-bottom:10px">
+        <div class="body">${resultBody}</div>
+      </div>
+
+      <div style="margin-bottom:10px">
+        ${rollHtml}
+      </div>
+
+      ${extraOutcomeBody ? `
+        <div class="description" style="margin-bottom:20px">
+          ${extraOutcomeBody}
+        </div>
+      ` : ""}
+    </div>
+  </div>
+`, { async: true });
+await roll.toMessage({
+  speaker: ChatMessage.getSpeaker({ actor }),
+  content: messageContent
+});
 
 /* -------------------------------------------- */
-/* Stress & Will automation                     */
+/* Stress automation                            */
 /* -------------------------------------------- */
 
 const stressChange = await updateStressFromPower(actor, powerLevel);
-// round down to nearest 10 for will cost
-const willCost = Math.floor(roll.total / 10) * 10;
-const willChange = await reduceWillFromRoll(actor, willCost);
-console.log(willCost, willChange)
+const willChange = await reduceWillFromRoll(actor, roll.total);
 await whisperSecretToGMs({
   actor,
   powerName,
@@ -445,8 +456,6 @@ const baseExtraLines = [
   `Will decreased from <strong>${willChange.from}</strong> to <strong>${willChange.to}</strong>.`,
 ];
 
-await show3dDiceIfAvailable(roll);
-
 if (powerName === "Meditation I") {
   const healRoll = await new Roll("1d5 + 3").evaluate();
   await show3dDiceIfAvailable(healRoll);
@@ -465,24 +474,20 @@ if (powerName === "Meditation I") {
   `;
 
   const extraLines = [
-    healRollHtml,
     `Health increased from <strong>${currentHp}</strong> to <strong>${healedTo}</strong>.`,
     removedBleedCount
       ? `Removed <strong>bleed</strong>.`
-      : `No Bleeding items were found.`,
+      : `No bleed condition found.`,
     ...baseExtraLines
   ];
 
-
-
-  await createCombinedPowerMessage({
+  await createPowerCardMessage({
     actor,
     title: powerName,
     image,
-    outcomeLabel,
-    resultBody: rollResultHtml,
-    roll,
+    outcomeLabel: "POWER ACTIVATED",
     bodyHtml: customMeditationHtml,
+    rollHtml: healRollHtml,
     extraHtml: buildExtraHtml(extraLines)
   });
 }
@@ -498,30 +503,28 @@ else if (powerName === "Meditation III") {
   `;
 
   const extraLines = [
-    minuteRollHtml,
     `Duration: <strong>${minuteRoll.total}</strong> minute${minuteRoll.total === 1 ? "" : "s"}.`,
     ...baseExtraLines
   ];
 
-  await createCombinedPowerMessage({
+  await createPowerCardMessage({
     actor,
     title: powerName,
     image,
-    outcomeLabel,
-    resultBody: rollResultHtml,
-    roll,
+    outcomeLabel: "POWER ACTIVATED",
     bodyHtml: customMeditationHtml,
+    rollHtml: minuteRollHtml,
     extraHtml: buildExtraHtml(extraLines)
   });
 }
 else {
-  await createCombinedPowerMessage({
+  // wait for roll
+  await wait(4_000);
+  await createPowerCardMessage({
     actor,
     title: powerName,
     image,
-    outcomeLabel,
-    resultBody: rollResultHtml,
-    roll,
+    outcomeLabel: "POWER ACTIVATED",
     bodyHtml: pageHtml,
     extraHtml: buildExtraHtml(baseExtraLines)
   });

@@ -353,6 +353,7 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
         if (!macro) return ui.notifications.error("import 'mosh roll will' macro");
         macro.execute({ args:[{
           actor: actor.name,
+          actorUuid: actor.uuid,
           combatValue: actor.system?.stats?.combat?.value,
           combatMax: actor.system?.stats?.combat?.max,
         }] });
