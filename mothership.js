@@ -129,8 +129,7 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
     if (!me && game.user.isGM) {
       me = canvas.tokens.controlled[0]?.actor;
       if (!me) {
-        ui.notifications.error("no character");
-        return null;
+        return app.actor
       }
       if (app.actor?.uuid !== me.uuid) {
         ui.notifications.error("selected wrong character");

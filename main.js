@@ -55,10 +55,29 @@ Hooks.once("ready", async () => {
       for (const [key, value] of entries) {
         await doc.setFlag("custom-foundry", key, value);
       }
+    } else if (
+      payload.action === "setOwnership" &&
+      payload.uuid &&
+      payload.userIds &&
+      payload.ownershipLevel
+    ) {
+      if (!game.user.isGM) return;
+      const doc = fromUuidSync(payload.uuid);
+
+      if (!doc) {
+        console.error("custom-foundry | document not found for uuid", payload.uuid);
+        return;
+      }
+      const ownership = doc.ownership
+      payload.userIds.forEach(id => {
+        ownership[id] = payload.ownershipLevel
+      })
+      doc.update({ ownership })
     }
   });
 
 
+  CONFIG.debug.hooks = false
 
 
   game.settings.register("custom-foundry", "ruler", {
