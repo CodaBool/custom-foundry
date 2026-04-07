@@ -108,9 +108,25 @@ Hooks.once("ready", async () => {
     game.settings.set("custom-cursor", "grabCursor", "codabool/img/heart/junk/wii-open.png")
   }
 
-  game.settings.set("core", "globalPlaylistVolume", 0.5),
-  game.settings.set("core", "globalAmbientVolume", 0.5),
-  game.settings.set("core", "globalInterfaceVolume", 0.5),
+  game.settings.set("core", "globalPlaylistVolume", 0.5)
+  game.settings.set("core", "globalAmbientVolume", 0.5)
+  game.settings.set("core", "globalInterfaceVolume", 0.5)
+
+
+  if (game.user.isGM) {
+    let fullUpdate = []
+    for (const playlist of game.playlists) {
+     	const updates = playlist.sounds.filter(s => s.volume !== 0.25)
+     	if (updates.length) fullUpdate.push(updates)
+    }
+    for (const playlists of fullUpdate) {
+      for (const playlist of playlists) {
+        await playlist.update({"volume": 0.25});
+      }
+    }
+    console.log("updated", fullUpdate.length)
+  }
+
 
   game.settings.register("custom-foundry", "ruler", {
     scope: "world",
@@ -138,15 +154,6 @@ Hooks.once("ready", async () => {
 
 
 Hooks.once("init", async () => {
-
-  // normalize all audio
-  Hooks.on("updatePlaylistSound", (sound, changes, options, userId) => {
-    console.log("ran", sound, changes, options, userId)
-    if (!("playing" in changes) || !changes.playing) return;
-    if (changes.volume === 0.25) return;
-    sound.update({ volume: 0.25 });
-  });
-
   // hide some journals
   Hooks.on('renderJournalDirectory', (app, htmlRaw) => {
     let html = htmlRaw
