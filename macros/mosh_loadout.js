@@ -392,6 +392,13 @@ console.log("Rolling for:", classKey, backgroundKey)
 console.log("Random 2 General:", generalRoll)
 console.log("Random 2 Class:", classRoll)
 console.log("Set 2 Background:", backgroundItems)
+
+
+if (me.items.size > 2) {
+  ui.notifications.error("loadout cannot be rerolled")
+  return
+}
+
 await addItemsToActor(me, loadoutItems)
 
 ui.notifications.info(

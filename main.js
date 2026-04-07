@@ -43,7 +43,6 @@ Hooks.once("ready", async () => {
     ) {
       if (!game.user.isGM) return;
 
-      
       const doc = fromUuidSync(payload.uuid);
       console.log("set flag", doc, "flags", payload.flags)
       if (!doc) {
@@ -73,12 +72,49 @@ Hooks.once("ready", async () => {
         ownership[id] = payload.ownershipLevel
       })
       doc.update({ ownership })
+    } else if (
+      payload.action === "volumeQuery"
+    ) {
+      if (game.user.isGM) return;
+      const playingSounds = [];
+      for (const playlist of game.playlists) {
+        for (const sound of playlist.sounds) {
+          if (sound.playing) {
+            playingSounds.push({
+              playlist: playlist.name,
+              sound: sound.name,
+              volume: sound.volume
+            });
+          }
+        }
+      }
+      game.socket.emit("module.custom-foundry", {
+        action: "log",
+        data: {
+          playlist: game.settings.get("core", "globalPlaylistVolume"),
+          ambient: game.settings.get("core", "globalAmbientVolume"),
+          interface: game.settings.get("core", "globalInterfaceVolume"),
+          playingSounds,
+        },
+        msg: `playlist: ${game.settings.get("core", "globalPlaylistVolume")} | ambient: ${game.settings.get("core", "globalAmbientVolume")} | interface: ${game.settings.get("core", "globalInterfaceVolume")} | playing: ${playingSounds[0].volume}`
+      });
+    } else if (
+      payload.action === "log"
+    ) {
+      if (!game.user.isGM) return
+      console.log(payload.data)
+      ui.notifications.info(payload.msg)
     }
   });
 
 
+  // general code
   CONFIG.debug.hooks = false
-
+  if (game.modules.get("custom-cursor").active) {
+    game.settings.set("custom-cursor", "defaultCursor", "codabool/img/heart/junk/40%5B0%5D.png")
+    game.settings.set("custom-cursor", "pointerCursor", "codabool/img/heart/junk/40%5B0%5D.png")
+    game.settings.set("custom-cursor", "grabCursor", "codabool/img/heart/junk/wii-open.png")
+  }
 
   game.settings.register("custom-foundry", "ruler", {
     scope: "world",

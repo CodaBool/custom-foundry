@@ -19,7 +19,7 @@
     ui.notifications.error("no itemId was passed to the macro");
     return;
   }
-  
+
   const itemId = args[0]
 
   const sourceItem = me.getEmbeddedDocument("Item", itemId);
@@ -108,8 +108,6 @@
         }
       });
     }
-    
-    
   }
 
   await me.rollCheck(null, "low", stat, null, null, item);

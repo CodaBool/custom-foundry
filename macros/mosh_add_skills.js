@@ -18,17 +18,15 @@ const skills = [
   "field medicine",
   "biology",
   "chemistry",
-  "computers",
   "electronics",
   "engineering",
-  "jury-rigging",
   "piloting",
   "ranged combat",
   "close quarters combat",
   "athletics",
   "mathematics",
   "survival",
-  "operations",
+  "art",
   "infiltration",
 ];
 
@@ -44,7 +42,8 @@ const confirmed = await foundry.applications.api.DialogV2.confirm({
   classes: ["map-prompt"],
   content: `
     <form>
-      <p class="hint">Select exactly <b>${MAX_SKILLS}</b> skill${MAX_SKILLS === 1 ? "" : "s"}</p>
+      <p style="text-align: center">Select exactly <b>${MAX_SKILLS}</b> skill${MAX_SKILLS === 1 ? "" : "s"}</p>
+      <p class="hint" style="text-align:center">You will gain <b>[+]</b> on relevant rolls</p>
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px">
         ${skills.map(skill => `
           <label style="display: flex; align-items: center; gap: 10px">
