@@ -76,17 +76,9 @@ Hooks.once("ready", async () => {
       payload.action === "volumeQuery"
     ) {
       if (game.user.isGM) return;
-      const playingSounds = [];
-      for (const playlist of game.playlists) {
-        for (const sound of playlist.sounds) {
-          if (sound.playing) {
-            playingSounds.push({
-              playlist: playlist.name,
-              sound: sound.name,
-              volume: sound.volume
-            });
-          }
-        }
+      let playing
+      if (game.playlists.playing.length) {
+        playing = game.playlists.playing[0].sounds._source.find(p => p.playing)?.volume
       }
       game.socket.emit("module.custom-foundry", {
         action: "log",
@@ -94,9 +86,9 @@ Hooks.once("ready", async () => {
           playlist: game.settings.get("core", "globalPlaylistVolume"),
           ambient: game.settings.get("core", "globalAmbientVolume"),
           interface: game.settings.get("core", "globalInterfaceVolume"),
-          playingSounds,
+          playing,
         },
-        msg: `${game.user.name} | playlist: ${game.settings.get("core", "globalPlaylistVolume")} | ambient: ${game.settings.get("core", "globalAmbientVolume")} | interface: ${game.settings.get("core", "globalInterfaceVolume")} | playing: ${playingSounds[0].volume}`
+        msg: `${game.user.name} | playlist: ${game.settings.get("core", "globalPlaylistVolume")} | ambient: ${game.settings.get("core", "globalAmbientVolume")} | interface: ${game.settings.get("core", "globalInterfaceVolume")} | playing: ${playing}`
       });
     } else if (
       payload.action === "log"
@@ -146,6 +138,15 @@ Hooks.once("ready", async () => {
 
 
 Hooks.once("init", async () => {
+
+  // normalize all audio
+  Hooks.on("updatePlaylistSound", (sound, changes, options, userId) => {
+    console.log("ran", sound, changes, options, userId)
+    if (!("playing" in changes) || !changes.playing) return;
+    if (changes.volume === 0.25) return;
+    sound.update({ volume: 0.25 });
+  });
+
   // hide some journals
   Hooks.on('renderJournalDirectory', (app, htmlRaw) => {
     let html = htmlRaw
