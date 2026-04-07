@@ -116,7 +116,7 @@ Hooks.once("ready", async () => {
   if (game.user.isGM) {
     let fullUpdate = []
     for (const playlist of game.playlists) {
-     	const updates = playlist.sounds.filter(s => s.volume !== 0.25)
+     	const updates = playlist.sounds.filter(s => s.volume !== 0.25 && !s.flags?.["custom-foundry"]?.volume)
      	if (updates.length) fullUpdate.push(updates)
     }
     for (const playlists of fullUpdate) {
@@ -124,7 +124,7 @@ Hooks.once("ready", async () => {
         await playlist.update({"volume": 0.25});
       }
     }
-    console.log("updated", fullUpdate.length)
+    console.log("updated unmarked tracks to 0.25", fullUpdate.length)
   }
 
 
