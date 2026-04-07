@@ -116,6 +116,10 @@ Hooks.once("ready", async () => {
     game.settings.set("custom-cursor", "grabCursor", "codabool/img/heart/junk/wii-open.png")
   }
 
+  game.settings.set("core", "globalPlaylistVolume", 0.5),
+  game.settings.set("core", "globalAmbientVolume", 0.5),
+  game.settings.set("core", "globalInterfaceVolume", 0.5),
+
   game.settings.register("custom-foundry", "ruler", {
     scope: "world",
     name: "turn off token ruler",
