@@ -307,7 +307,7 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
 
       btn.addEventListener(
         "click",
-        (ev) => {
+        async (ev) => {
           ev.preventDefault();
           ev.stopPropagation();
           ev.stopImmediatePropagation();
@@ -318,7 +318,9 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
             return;
           }
 
-          const macro = game.macros.getName("mosh use weapon");
+
+
+          const macro = await fromUuid("Compendium.custom-foundry.codabool-macros.Macro.mNqiVq6aVCSK7QQU");
           if (!macro) {
             ui.notifications.error("the use weapon macro must be imported");
             return;
@@ -344,11 +346,19 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
 
     willBtn.addEventListener(
       "click",
-      (ev) => {
+      async (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
         ev.stopImmediatePropagation();
-        const macro = game.macros.getName("mosh roll will");
+
+        const macro = await fromUuid("Compendium.custom-foundry.codabool-macros.Macro.kIXud7jpdIw2lFPO");
+
+        if (!macro) {
+          ui.notifications.error("Macro not found");
+          return;
+        }
+        console.log("awaited macro", macro)
+        // const macro = game.macros.getName("mosh roll will");
         if (!macro) return ui.notifications.error("import 'mosh roll will' macro");
         macro.execute({ args:[{
           actor: actor.name,
@@ -367,7 +377,9 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
     applyStaticSheetChanges();
     rewriteCombatAsWill();
     bindWillRoll();
-    bindWeaponRolls();
+    if (!root.classList.contains("creature")) {
+      bindWeaponRolls();
+    }
   }
 
   let scheduled = false;
