@@ -96,7 +96,7 @@ Hooks.once("ready", async () => {
           interface: game.settings.get("core", "globalInterfaceVolume"),
           playingSounds,
         },
-        msg: `playlist: ${game.settings.get("core", "globalPlaylistVolume")} | ambient: ${game.settings.get("core", "globalAmbientVolume")} | interface: ${game.settings.get("core", "globalInterfaceVolume")} | playing: ${playingSounds[0].volume}`
+        msg: `${game.user.name} | playlist: ${game.settings.get("core", "globalPlaylistVolume")} | ambient: ${game.settings.get("core", "globalAmbientVolume")} | interface: ${game.settings.get("core", "globalInterfaceVolume")} | playing: ${playingSounds[0].volume}`
       });
     } else if (
       payload.action === "log"
