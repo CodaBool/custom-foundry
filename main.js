@@ -143,36 +143,38 @@ Hooks.once("ready", async () => {
   game.settings.register("custom-foundry", "volume", {
     scope: "world",
     name: "normalize music",
-    type: Boolean,
-    default: 0.2,
+    type: Number,
+    default: 0.08,
     config: true,
     restricted: true,
   })
 
-  if (game.user.isGM) {
-    const volume = game.settings.get("custom-foundry", "volume")
-    let skipped = 0,
-      fullUpdate = []
+  setTimeout(() => {
+    if (game.user.isGM) {
+      const volume = game.settings.get("custom-foundry", "volume")
+      let skipped = 0,
+        fullUpdate = []
 
-    for (const playlist of game.playlists) {
-      const updates = playlist.sounds.filter(
-        s => s.volume !== volume && !s.flags?.["custom-foundry"]?.volume,
+      for (const playlist of game.playlists) {
+        const updates = playlist.sounds.filter(
+          s => s.volume !== volume && !s.flags?.["custom-foundry"]?.volume,
+        )
+        if (updates.length) {
+          fullUpdate.push(updates)
+        } else {
+          skipped++
+        }
+      }
+      for (const playlists of fullUpdate) {
+        for (const playlist of playlists) {
+          playlist.update({ volume: volume })
+        }
+      }
+      console.log(
+        `updated ${fullUpdate.length} playlists to ${volume}, skipped ${skipped}`,
       )
-      if (updates.length) {
-        fullUpdate.push(updates)
-      } else {
-        skipped++
-      }
     }
-    for (const playlists of fullUpdate) {
-      for (const playlist of playlists) {
-        await playlist.update({ volume: volume })
-      }
-    }
-    console.log(
-      `updated ${fullUpdate.length} tracks to ${volume}, skipped ${skipped}`,
-    )
-  }
+  }, 5_000)
 
   if (game.settings.get("custom-foundry", "ruler")) {
     CONFIG.Token.rulerClass = null
