@@ -14,10 +14,11 @@ export async function mothership() {
 
 const MODULE_ID = "custom-foundry";
 const STAT_OPTIONS = ["speed", "strength", "will"];
+const GD = game.world.id === "gradient-descent"
 
 Hooks.on("renderItemSheet", (app, htmlRaw) => {
   const root = htmlRaw?.[0];
-  if (!root) return;
+  if (!root || GD) return;
 
   // prevent duplicate injection on re-renders
   if (root.querySelector("#custom-foundry-stat-config")) return;
@@ -151,7 +152,7 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
     return input;
   }
 
-  function applyStaticSheetChanges() {
+  function applyStaticSheetChanges(isGD) {
     // pronouns -> flaw
     const pronounInput = relabelHeaderField('input[name="system.pronouns.value"]', "Flaw");
     if (pronounInput) {
@@ -162,6 +163,8 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
 
     // rank -> background
     relabelHeaderField('input[name="system.rank.value"]', "Background");
+
+    if (isGD) return
 
     // credits -> notes
     relabelHeaderField('input[name="system.credits.value"]', "Notes (Money)");
@@ -374,7 +377,9 @@ Hooks.on("renderActorSheet", (app, htmlRaw) => {
   function runPass() {
     if (!root.isConnected) return;
 
-    applyStaticSheetChanges();
+    applyStaticSheetChanges(GD);
+    if (GD) return
+
     rewriteCombatAsWill();
     bindWillRoll();
     if (!root.classList.contains("creature")) {
