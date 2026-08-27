@@ -196,7 +196,8 @@ Hooks.once("init", async () => {
   Hooks.on("createChatMessage", async m => {
     if (
       typeof m?.flavor === "string" &&
-      m?.flavor.includes("rolls for Initiative!")
+      m?.flavor.includes("rolls for Initiative!") &&
+      game.user.isGM
     ) {
       await m.delete()
     }
