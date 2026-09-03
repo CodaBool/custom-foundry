@@ -16,6 +16,17 @@ const MODULE_ID = "custom-foundry";
 const STAT_OPTIONS = ["speed", "strength", "will"];
 const GD = game.world.id === "gradient-descent"
 
+// Space scenes can have stars
+// use a secret scene setting to trigger: -0.05 environment luminosity
+Hooks.on("canvasReady", () => {
+  if (canvas.scene?.environment?.base?.luminosity !== -0.05) return;
+  const macro = game.macros.getName("stars");
+  if (!macro) {
+    return ui.notifications.error('Macro "stars" not found.');
+  }
+  macro.execute();
+});
+
 Hooks.on("renderItemSheet", (app, htmlRaw) => {
   const root = htmlRaw?.[0];
   if (!root || GD) return;
