@@ -100,23 +100,6 @@ Hooks.once("ready", async () => {
 
   // general code
   CONFIG.debug.hooks = false
-  if (game.modules.get("custom-cursor").active) {
-    game.settings.set(
-      "custom-cursor",
-      "defaultCursor",
-      "codabool/img/heart/junk/cursor.png",
-    )
-    game.settings.set(
-      "custom-cursor",
-      "pointerCursor",
-      "codabool/img/heart/junk/cursor.png",
-    )
-    game.settings.set(
-      "custom-cursor",
-      "grabCursor",
-      "codabool/img/heart/junk/wii-open.png",
-    )
-  }
 
   game.settings.set("core", "globalPlaylistVolume", 0.5)
   game.settings.set("core", "globalAmbientVolume", 0.5)
@@ -149,6 +132,39 @@ Hooks.once("ready", async () => {
     restricted: true,
   })
 
+  game.settings.register("custom-foundry", "pointerCursor", {
+    name: 'Pointer Cursor',
+    scope: "world",
+    config: true,
+    type: String,
+    default: "codabool/img/heart/junk/cursor.png",
+    filePicker: "image",
+    requiresReload: true
+  });
+
+  game.settings.register("custom-foundry", "grabCursor", {
+    name: 'Grab Cursor',
+    scope: "world",
+    config: true,
+    type: String,
+    default: "codabool/img/heart/junk/wii-open.png",
+    filePicker: "image",
+    requiresReload: true
+  });
+
+  const pointer = game.settings.get("custom-foundry", "pointerCursor");
+  const grab = game.settings.get("custom-foundry", "grabCursor");
+
+  Object.assign(CONFIG.cursors, {
+      default: pointer,
+      ["default-down"]: pointer,
+      pointer,
+      ["pointer-down"]: pointer,
+      grab,
+      ["grab-down"]: grab,
+  });
+
+  // sets all playlists to "volume" setting if not already set through a flag "volume"
   setTimeout(() => {
     if (game.user.isGM) {
       const volume = game.settings.get("custom-foundry", "volume")
@@ -202,10 +218,11 @@ Hooks.once("init", async () => {
       await m.delete()
     }
   })
-  // hide some journals
+
+  // hide journals with the flag "hidden"
   Hooks.on("renderJournalDirectory", (app, htmlRaw) => {
     let html = htmlRaw
-    if (game.release.generation === 12 || html?.length === 1) {
+    if (html?.length === 1) {
       html = html[0]
     }
     const j = game.journal._source.filter(
