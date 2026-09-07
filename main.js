@@ -152,18 +152,6 @@ Hooks.once("ready", async () => {
     requiresReload: true
   });
 
-  const pointer = game.settings.get("custom-foundry", "pointerCursor");
-  const grab = game.settings.get("custom-foundry", "grabCursor");
-
-  Object.assign(CONFIG.cursors, {
-      default: pointer,
-      ["default-down"]: pointer,
-      pointer,
-      ["pointer-down"]: pointer,
-      grab,
-      ["grab-down"]: grab,
-  });
-
   // sets all playlists to "volume" setting if not already set through a flag "volume"
   setTimeout(() => {
     if (game.user.isGM) {
@@ -218,6 +206,18 @@ Hooks.once("init", async () => {
       await m.delete()
     }
   })
+
+  const pointer = game.settings.get("custom-foundry", "pointerCursor");
+  const grab = game.settings.get("custom-foundry", "grabCursor");
+
+  Object.assign(CONFIG.cursors, {
+      default: pointer,
+      ["default-down"]: pointer,
+      pointer,
+      ["pointer-down"]: pointer,
+      grab,
+      ["grab-down"]: grab,
+  });
 
   // hide journals with the flag "hidden"
   Hooks.on("renderJournalDirectory", (app, htmlRaw) => {
