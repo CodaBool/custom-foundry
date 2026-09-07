@@ -132,25 +132,11 @@ Hooks.once("ready", async () => {
     restricted: true,
   })
 
-  game.settings.register("custom-foundry", "pointerCursor", {
-    name: 'Pointer Cursor',
-    scope: "world",
-    config: true,
-    type: String,
-    default: "codabool/img/heart/junk/cursor.png",
-    filePicker: "image",
-    requiresReload: true
-  });
+  // custom cursor automation
+  game.settings.set("custom-cursor", "defaultCursor", "codabool/img/heart/junk/cursor.png")
+  game.settings.set("custom-cursor", "pointerCursor", "codabool/img/heart/junk/cursor.png")
+  game.settings.set("custom-cursor", "grabCursor", "codabool/img/heart/junk/wii-open.png")
 
-  game.settings.register("custom-foundry", "grabCursor", {
-    name: 'Grab Cursor',
-    scope: "world",
-    config: true,
-    type: String,
-    default: "codabool/img/heart/junk/wii-open.png",
-    filePicker: "image",
-    requiresReload: true
-  });
 
   // sets all playlists to "volume" setting if not already set through a flag "volume"
   setTimeout(() => {
@@ -207,17 +193,7 @@ Hooks.once("init", async () => {
     }
   })
 
-  const pointer = game.settings.get("custom-foundry", "pointerCursor");
-  const grab = game.settings.get("custom-foundry", "grabCursor");
 
-  Object.assign(CONFIG.cursors, {
-      default: pointer,
-      ["default-down"]: pointer,
-      pointer,
-      ["pointer-down"]: pointer,
-      grab,
-      ["grab-down"]: grab,
-  });
 
   // hide journals with the flag "hidden"
   Hooks.on("renderJournalDirectory", (app, htmlRaw) => {
