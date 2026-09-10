@@ -1,3 +1,9 @@
+export async function mothershipInit() {
+  setTimeout(() => {
+    setupSceneEffects()
+  }, 3_000)
+}
+
 export async function mothership() {
   const MODULE_ID = "custom-foundry";
   const STAT_OPTIONS = ["speed", "strength", "will"];
@@ -7,7 +13,6 @@ export async function mothership() {
   // use a secret scene setting to trigger: -0.05 environment luminosity
   // Changing/viewing scenes
   Hooks.on("canvasReady", setupSceneEffects);
-  Hooks.once("ready", setupSceneEffects);
 
   Hooks.on("renderItemSheet", (app, htmlRaw) => {
     const root = htmlRaw?.[0];

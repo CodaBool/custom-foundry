@@ -1,4 +1,4 @@
-import { mothership } from "./mothership.js"
+import { mothership, mothershipInit } from "./mothership.js"
 
 Hooks.once("ready", async () => {
   if (!game.socket) return
@@ -211,4 +211,5 @@ Hooks.once("init", async () => {
       })
     }
   })
+  if (game.system.id === "mosh") await mothershipInit()
 })
