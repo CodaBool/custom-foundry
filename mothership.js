@@ -5,14 +5,9 @@ export async function mothership() {
 
   // Space scenes can have stars
   // use a secret scene setting to trigger: -0.05 environment luminosity
-  Hooks.on("canvasReady", () => {
-    if (canvas.scene?.environment?.base?.luminosity !== -0.05) return;
-    const macro = game.macros.getName("stars");
-    if (!macro) {
-      return ui.notifications.error('Macro "stars" not found.');
-    }
-    macro.execute();
-  });
+  // Changing/viewing scenes
+  Hooks.on("canvasReady", setupSceneEffects);
+  Hooks.once("ready", setupSceneEffects);
 
   Hooks.on("renderItemSheet", (app, htmlRaw) => {
     const root = htmlRaw?.[0];
@@ -430,4 +425,88 @@ export async function mothership() {
   //   console.log("app2", htmlRaw)
   // })
 
+}
+
+
+
+async function setupSceneEffects() {
+  if (canvas.scene?.environment?.base?.luminosity !== -0.05) return;
+
+  const macro = game.macros.getName("stars");
+
+  if (!macro) {
+    if (game.user.isGM) {
+      ui.notifications.error('Macro "stars" not found.');
+    }
+    return;
+  }
+
+  await macro.execute();
+  await sharePadding();
+}
+
+
+async function sharePadding() {
+  if (game.modules.get("simplefog")?.active) {
+    const fog = canvas.simplefog;
+
+    if (!fog && game.user.isGM) {
+      return ui.notifications.error("Simple Fog layer not found.");
+    }
+
+    const full = canvas.dimensions.rect;
+    const scene = canvas.dimensions.sceneRect;
+
+    const fullRight = full.x + full.width;
+    const fullBottom = full.y + full.height;
+    const sceneRight = scene.x + scene.width;
+    const sceneBottom = scene.y + scene.height;
+
+    const paddingAreas = [
+      // Top
+      {
+        x: full.x,
+        y: full.y,
+        width: full.width,
+        height: scene.y - full.y
+      },
+
+      // Bottom
+      {
+        x: full.x,
+        y: sceneBottom,
+        width: full.width,
+        height: fullBottom - sceneBottom
+      },
+
+      // Left
+      {
+        x: full.x,
+        y: scene.y,
+        width: scene.x - full.x,
+        height: scene.height
+      },
+
+      // Right
+      {
+        x: sceneRight,
+        y: scene.y,
+        width: fullRight - sceneRight,
+        height: scene.height
+      }
+    ];
+
+    for (const area of paddingAreas) {
+      if (area.width <= 0 || area.height <= 0) continue;
+
+      fog.renderBrush({
+        shape: fog.BRUSH_TYPES.BOX,
+        fill: 0x000000,
+        ...area
+      });
+    }
+
+    await fog.commitHistory();
+    fog.updatePerception();
+  }
 }
