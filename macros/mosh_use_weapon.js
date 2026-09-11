@@ -1,5 +1,4 @@
 (async () => {
-  const MODULE_ID = "custom-foundry";
   const FLAG_KEY = "stat";
   const STAT_OPTIONS = ["speed", "strength", "will"];
 
@@ -30,7 +29,7 @@
 
   const item = game.items.getName(sourceItem.name)
 
-  let stat = item.getFlag(MODULE_ID, FLAG_KEY);
+  let stat = item.getFlag("custom-foundry", FLAG_KEY);
 
   if (!STAT_OPTIONS.includes(stat)) {
     const descriptions = {
@@ -98,7 +97,7 @@
     stat = result;
 
     if (game.user.isGM) {
-      await item.setFlag(MODULE_ID, FLAG_KEY, stat);
+      await item.setFlag("custom-foundry", FLAG_KEY, stat);
     } else {
       game.socket.emit("module.custom-foundry", {
         action: "setDocumentFlags",

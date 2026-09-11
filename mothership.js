@@ -1,18 +1,10 @@
-export async function mothershipInit() {
-  setTimeout(() => {
-    setupSceneEffects()
-  }, 3_000)
-}
-
 export async function mothership() {
-  const MODULE_ID = "custom-foundry";
   const STAT_OPTIONS = ["speed", "strength", "will"];
   const GD = game.world.id === "gradient-descent"
 
   // Space scenes can have stars
   // use a secret scene setting to trigger: -0.05 environment luminosity
   // Changing/viewing scenes
-  Hooks.on("canvasReady", setupSceneEffects);
 
   Hooks.on("renderItemSheet", (app, htmlRaw) => {
     const root = htmlRaw?.[0];
@@ -28,7 +20,7 @@ export async function mothership() {
     // fallback / verification lookup like you mentioned
     const item = game.items.getName(app.document.name);
 
-    const currentStat = item.getFlag(MODULE_ID, "stat") || "";
+    const currentStat = item.getFlag("custom-foundry", "stat") || "";
 
     const block = document.createElement("div");
     block.id = "custom-foundry-stat-config";
@@ -70,12 +62,12 @@ export async function mothership() {
 
         if (game.user.isGM) {
           if (!value) {
-            await item.unsetFlag(MODULE_ID, "stat");
+            await item.unsetFlag("custom-foundry", "stat");
             ui.notifications.info(`Cleared stat on '${item.name}'`);
             return;
           }
 
-          await item.setFlag(MODULE_ID, "stat", value);
+          await item.setFlag("custom-foundry", "stat", value);
         } else {
           game.socket.emit("module.custom-foundry", {
             action: "setDocumentFlags",
@@ -420,98 +412,4 @@ export async function mothership() {
     runPass();
   });
 
-  // Hooks.on("renderApplication", async (app, htmlRaw) => {
-  //   console.log("app1", htmlRaw)
-
-  // })
-
-
-  // Hooks.on("renderApplicationV2", async (app, htmlRaw) => {
-  //   console.log("app2", htmlRaw)
-  // })
-
-}
-
-
-
-async function setupSceneEffects() {
-  if (canvas.scene?.environment?.base?.luminosity !== -0.05) return;
-
-  const macro = game.macros.getName("stars");
-
-  if (!macro) {
-    if (game.user.isGM) {
-      ui.notifications.error('Macro "stars" not found.');
-    }
-    return;
-  }
-
-  await macro.execute();
-  await sharePadding();
-}
-
-
-async function sharePadding() {
-  if (game.modules.get("simplefog")?.active) {
-    const fog = canvas.simplefog;
-
-    if (!fog && game.user.isGM) {
-      return ui.notifications.error("Simple Fog layer not found.");
-    }
-
-    const full = canvas.dimensions.rect;
-    const scene = canvas.dimensions.sceneRect;
-
-    const fullRight = full.x + full.width;
-    const fullBottom = full.y + full.height;
-    const sceneRight = scene.x + scene.width;
-    const sceneBottom = scene.y + scene.height;
-
-    const paddingAreas = [
-      // Top
-      {
-        x: full.x,
-        y: full.y,
-        width: full.width,
-        height: scene.y - full.y
-      },
-
-      // Bottom
-      {
-        x: full.x,
-        y: sceneBottom,
-        width: full.width,
-        height: fullBottom - sceneBottom
-      },
-
-      // Left
-      {
-        x: full.x,
-        y: scene.y,
-        width: scene.x - full.x,
-        height: scene.height
-      },
-
-      // Right
-      {
-        x: sceneRight,
-        y: scene.y,
-        width: fullRight - sceneRight,
-        height: scene.height
-      }
-    ];
-
-    for (const area of paddingAreas) {
-      if (area.width <= 0 || area.height <= 0) continue;
-
-      fog.renderBrush({
-        shape: fog.BRUSH_TYPES.BOX,
-        fill: 0x000000,
-        ...area
-      });
-    }
-
-    await fog.commitHistory();
-    fog.updatePerception();
-  }
 }

@@ -1,4 +1,4 @@
-import { mothership, mothershipInit } from "./mothership.js"
+import { mothership } from "./mothership.js"
 
 Hooks.once("ready", async () => {
   if (!game.socket) return
@@ -211,5 +211,112 @@ Hooks.once("init", async () => {
       })
     }
   })
-  if (game.system.id === "mosh") await mothershipInit()
+
+
+  Hooks.on("renderSceneConfig", (app, element) => {
+    // Avoid duplicate injection on re-render.
+    if (element.querySelector("[data-custom-foundry-scene-macros]")) return;
+
+    const scene = app.document;
+
+    const loadMacros = scene.getFlag("custom-foundry", "load-macros") ?? [];
+    const unloadMacros = scene.getFlag("custom-foundry", "unload-macros") ?? [];
+
+    const { HTMLDocumentTagsElement } = foundry.applications.elements;
+
+    const wrapper = document.createElement("div");
+    wrapper.dataset.customFoundrySceneMacros = "";
+
+    /*
+    * Load Macros
+    */
+    const loadGroup = document.createElement("div");
+    loadGroup.classList.add("form-group", "stacked");
+
+    const loadLabel = document.createElement("label");
+    loadLabel.textContent = "Load Macros";
+
+    const loadTags = HTMLDocumentTagsElement.create({
+      name: "flags.custom-foundry.load-macros",
+      value: Array.isArray(loadMacros) ? loadMacros : [],
+      type: "Macro",
+      placeholder: "Enter UUID or Drop Macro"
+    });
+
+    loadGroup.append(
+      loadLabel,
+      loadTags
+    );
+
+    /*
+    * Unload Macros
+    */
+    const unloadGroup = document.createElement("div");
+    unloadGroup.classList.add("form-group", "stacked");
+
+    const unloadLabel = document.createElement("label");
+    unloadLabel.textContent = "Unload Macros";
+
+    const unloadTags = HTMLDocumentTagsElement.create({
+      name: "flags.custom-foundry.unload-macros",
+      value: Array.isArray(unloadMacros) ? unloadMacros : [],
+      type: "Macro",
+      placeholder: "Enter UUID or Drop Macro"
+    });
+
+    unloadGroup.append(
+      unloadLabel,
+      unloadTags
+    );
+
+    const hr = document.createElement("hr");
+
+    wrapper.append(
+      hr,
+      loadGroup,
+      unloadGroup
+    );
+
+    const target =
+      element.querySelector('.tab[data-tab="basics"]') ??
+      element.querySelector('[data-tab="basics"]') ??
+      element.querySelector("form") ??
+      element;
+
+    target.appendChild(wrapper);
+  });
+
+  Hooks.on("canvasReady", async canvas => {
+    await runSceneMacros(canvas.scene, "load-macros")
+  });
+
+  Hooks.on("canvasTearDown", async (canvas, options) => {
+    const scene = canvas.scene
+    if (!scene) return
+    if (options?.nextScene?.id === scene.id) return
+    await runSceneMacros(scene, "unload-macros")
+  });
+
 })
+
+async function runSceneMacros(scene, flag) {
+  if (!scene) return;
+
+  let uuids = scene.getFlag("custom-foundry", flag) ?? [];
+
+  if (!Array.isArray(uuids)) {
+    uuids = uuids ? [uuids] : [];
+  }
+
+  for (const uuid of uuids) {
+    try {
+      const macro = await fromUuid(uuid);
+      if (!macro) continue
+      if (macro.documentName !== "Macro") continue
+      if (!macro.canExecute) continuev
+      await macro.execute();
+    } catch (error) {
+      console.error(`Failed scene macro ${uuid}`, error);
+    }
+  }
+}
