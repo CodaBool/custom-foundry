@@ -1,8 +1,15 @@
 import { mothership } from "./mothership.js"
+import {
+  initRelationships,
+  readyRelationships,
+  handleRelationshipSocket,
+} from "./relationship.js"
 
 Hooks.once("ready", async () => {
   if (!game.socket) return
+  readyRelationships()
   game.socket.on(`module.custom-foundry`, async payload => {
+    if (await handleRelationshipSocket(payload)) return
     // macro proxy
     if (
       payload.action === "executeMacroContentForPlayer" &&
@@ -175,6 +182,7 @@ Hooks.once("ready", async () => {
 
 Hooks.once("init", async () => {
   // OBS specific
+  initRelationships()
   setTimeout(() => {
     if (game.user.name === "OBS") {
       document.querySelector("#fvtt-party-resources-status-bar")?.remove()
@@ -313,7 +321,7 @@ async function runSceneMacros(scene, flag) {
       const macro = await fromUuid(uuid);
       if (!macro) continue
       if (macro.documentName !== "Macro") continue
-      if (!macro.canExecute) continuev
+      if (!macro.canExecute) continue
       await macro.execute();
     } catch (error) {
       console.error(`Failed scene macro ${uuid}`, error);
